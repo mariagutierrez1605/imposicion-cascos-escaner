@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imposición de Cascos 2026</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1f4f8;
+      color: #172b46;
+      margin: 0;
+      padding: 18px;
+    }
+    main {
+      max-width: 600px;
+      margin: auto;
+    }
+    header {
+      background: #17365d;
+      color: white;
+      text-align: center;
+      padding: 22px 12px;
+      border-radius: 14px;
+    }
+    .card {
+      background: white;
+      padding: 18px;
+      margin-top: 16px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    button, input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      background: #17365d;
+      color: white;
+      border: 0;
+      font-weight: bold;
+    }
+    input { border: 1px solid #bbc5d2; }
+    #resultado {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 9px;
+      overflow-wrap: anywhere;
+    }
+    .valido { background: #d9f8e5; }
+    .error { background: #ffe4e4; }
+    .aviso { background: #fff0cc; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h2>IMPOSICIÓN DE CASCOS 2026</h2>
+    <p>Universidad de Panamá · C.R.U. de Coclé</p>
+  </header>
+
+  <section class="card">
+    <h3>Control de ingreso</h3>
+    <p>Permite el acceso a la cámara para escanear el QR.</p>
+    <div id="lector"></div>
+    <button id="abrir">Abrir cámara / escanear QR</button>
+    <button id="detener">Detener cámara</button>
+    <input id="codigo" placeholder="O escribe el código del boleto">
+    <button id="manual">Validar código</button>
+    <div id="resultado" role="status" aria-live="polite">
+      Esperando un boleto…
+    </div>
+  </section>
+</main>
+
+<script>
+  let lector = null;
+  let ocupado = false;
+
+  const resultado = document.getElementById('resultado');
+
+  function mostrar(mensaje, clase) {
+    resultado.className = clase;
+    resultado.textContent = mensaje;
+  }
+
+  async function detenerCamara() {
+    if (lector && lector.isScanning) {
+      try { await lector.stop(); } catch (e) {}
+    }
+  }
+
+  async function abrirCamara() {
+    if (!window.Html5Qrcode) {
+      mostrar('No se pudo cargar el lector QR. Revisa internet.', 'aviso');
+      return;
+    }
+
+    try {
+      if (!lector) lector = new Html5Qrcode('lector');
+
+      await lector.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        async texto => {
+          if (ocupado) return;
+          document.getElementById('codigo').value = texto.trim();
+          await detenerCamara();
+          validar(texto.trim());
+        },
+        () => {}
+      );
+      mostrar('Cámara activa. Enfoca el código QR.', 'valido');
+    } catch (e) {
+      mostrar(
+        'No se pudo abrir la cámara. Abre esta página en Safari o Chrome y permite el acceso a la cámara. Detalle: ' + e,
+        'error'
+      );
+    }
+  }
+
+  function validar(codigo) {
+    if (ocupado) return;
+    codigo = String(codigo || '').trim().toUpperCase();
+
+    if (!codigo) {
+      mostrar('Escribe o escanea un código.', 'aviso');
+      return;
+    }
+
+    ocupado = true;
+    mostrar('Consultando el registro…', 'aviso');
+
+    // La conexión con Google Apps Script se configurará en el siguiente paso.
+    mostrar(
+      'QR leído: ' + codigo +
+      '. Falta conectar el escáner con el registro de boletos.',
+      'aviso'
+    );
+    ocupado = false;
+  }
+
+  document.getElementById('abrir').addEventListener('click', abrirCamara);
+  document.getElementById('detener').addEventListener('click', detenerCamara);
+  document.getElementById('manual').addEventListener('click', () => {
+    validar(document.getElementById('codigo').value);
+  });
+</script>
+</body>
+</html>
